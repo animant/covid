@@ -13,6 +13,7 @@ Install pyhton3 modules: requests, matplotlib, csv
 Usage
 =====
 Print `./covid_visual.py -h` for help.
+
 Print `./covid_visual.py -l` to list all countries names and dataset formats
 
 Examples
