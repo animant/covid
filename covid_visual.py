@@ -132,7 +132,7 @@ def main():
             print("        "+str(statistic[f][0][c]))
         print()
     if IS_MPL:
-        if DAILY_SET & set(formats) == set([]):
+        if (DAILY_SET & set(formats) == set([])) or (set(formats) - DAILY_SET == set([])):
             plot_subgraph(plt, statistic, countries, formats)
         else:
             plt.subplot(211)
