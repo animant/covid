@@ -24,7 +24,7 @@ FMTS = {'C':'Confirmed','D':'Deaths','R':'Recovered','CD':'Confirmed (daily)','D
 def parse_raw(raw_file):
     reader = csv.reader(open(raw_file))
     datestamps = next(reader)[4:]
-    statistic_dups = [(r[1].upper(), list(map(lambda x:int(x), r[4:]))) for r in reader]
+    statistic_dups = [(r[1].upper().replace(',',''), list(map(lambda x:int(x), r[4:]))) for r in reader]
     statistic = dict([(country, (lambda x:[sum(y) for y in zip(*x)])([s[1] for s in statistic_dups if s[0] == country])) for country in set(next(zip(*statistic_dups)))])
     return (statistic, datestamps)
 
