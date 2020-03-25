@@ -18,8 +18,10 @@ AXIS_SPARSE = 10
 COVID_PATH = ".covid"
 COVID_LOCK = ".covid.lock"
 
-DAILY_SET = set(['CD','DD','RD'])
-FMTS = {'C':'Confirmed','D':'Deaths','R':'Recovered','CD':'Confirmed (daily)','DD':'Deaths (daily)','RD':'Recovered (daily)'}
+#DAILY_SET = set(['CD','DD','RD'])
+DAILY_SET = set(['CD','DD'])
+FMTS = {'C':'Confirmed','D':'Deaths','CD':'Confirmed (daily)','DD':'Deaths (daily)'}
+#FMTS = {'C':'Confirmed','D':'Deaths','R':'Recovered','CD':'Confirmed (daily)','DD':'Deaths (daily)','RD':'Recovered (daily)'}
 
 def parse_raw(raw_file):
     reader = csv.reader(open(raw_file))
@@ -30,12 +32,12 @@ def parse_raw(raw_file):
 
 def load_raw_data(path, lock_filename):
     print("Update raw data....")
-    res = requests.get("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv")
+    res = requests.get("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
     open(f"{path}/Confirmed.csv","w").write(res.text)
-    res = requests.get("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv")
+    res = requests.get("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
     open(f"{path}/Deaths.csv","w").write(res.text)
-    res = requests.get("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv")
-    open(f"{path}/Recovered.csv","w").write(res.text)
+    #res = requests.get("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv")
+    #open(f"{path}/Recovered.csv","w").write(res.text)
     open(lock_filename,"w").write(str(date.today()))
 
 def init_update():
@@ -62,12 +64,13 @@ def load_statistic():
 
     db_confirmed = parse_raw(f"{COVID_PATH}/Confirmed.csv")
     db_death = parse_raw(f"{COVID_PATH}/Deaths.csv")
-    db_recovered = parse_raw(f"{COVID_PATH}/Recovered.csv")
+    #db_recovered = parse_raw(f"{COVID_PATH}/Recovered.csv")
 
     db_confirmed_diff = diff_db(db_confirmed)
     db_death_diff = diff_db(db_death)
-    db_recovered_diff = diff_db(db_recovered)
-    return {"C":db_confirmed, "D":db_death, "R":db_recovered, "CD":db_confirmed_diff, "DD":db_death_diff, "RD":db_recovered_diff}
+    #db_recovered_diff = diff_db(db_recovered)
+    return {"C":db_confirmed, "D":db_death, "CD":db_confirmed_diff, "DD":db_death_diff}
+    #return {"C":db_confirmed, "D":db_death, "R":db_recovered, "CD":db_confirmed_diff, "DD":db_death_diff, "RD":db_recovered_diff}
     
 
 def show_countires(statistic):
@@ -82,7 +85,7 @@ def show_countires(statistic):
     print("Formats:")
     print("C - confirmed, CD - confirmed daily")
     print("D - deaths,    DD - deaths daily")
-    print("R - recovered, RD - recovered daily")
+    #print("R - recovered, RD - recovered daily")
     print("-"*(30*(COL_NUM+1)))
 
 def plot_subgraph(plt, statistic, countries, formats):
@@ -102,7 +105,7 @@ def main():
         print("      -l              - show country names")
         print("      -c <COUNTRIES>  - set counties (coma separated)")
         print("      -f <FORMATS>    - set formats (coma separated)")
-        print("     Formats: [C]onfirmed , [D]eaths, [R]ecovered")
+        print("     Formats: [C]onfirmed , [D]eaths")
         print("              +[D]aily")
         print("---------------------------------------------------")
         print("Examples:")
@@ -121,7 +124,7 @@ def main():
         print("Error: '-c' option isn't set")
         exit(-1)
     countries = sys.argv[sys.argv.index('-c')+1].upper().split(',')
-    formats = ('C,D,R' if not '-f' in sys.argv else sys.argv[sys.argv.index('-f')+1]).upper().split(',')
+    formats = ('C,D' if not '-f' in sys.argv else sys.argv[sys.argv.index('-f')+1]).upper().split(',')
     print("Timeline:")
     print("    "+str(statistic['C'][1]))
     print()
