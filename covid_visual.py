@@ -163,7 +163,6 @@ def main():
         exit(-1)
     countries = sys.argv[sys.argv.index('-c')+1].upper().split(',')
     formats = ('C,D' if not '-f' in sys.argv else sys.argv[sys.argv.index('-f')+1]).upper().split(',')
-    formats = list(set(formats))
     print("Timeline:")
     print("    "+str(statistic['C'][1]))
     print()
@@ -182,7 +181,7 @@ def main():
         #    plt.subplot(212)
         #    plot_subgraph(plt, statistic, countries, set(formats)&DAILY_SET)
         if len(formats) == 1:
-            plot_subgraph(plt, statistic, countries, formats)
+            plot_subgraph(plt, statistic, countries, formats[0])
         elif len(formats) == 2:
             plt.subplot(211)
             plot_subgraph(plt, statistic, countries, formats[0])
@@ -204,6 +203,8 @@ def main():
             plot_subgraph(plt, statistic, countries, formats[2])
             plt.subplot(224)
             plot_subgraph(plt, statistic, countries, formats[3])
+        else:
+            print("Error, duplicated formats?")
         plt.show()
 
 
