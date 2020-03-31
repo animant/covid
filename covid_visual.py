@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import csv
+import difflib
 try:
     import matplotlib.pyplot as plt
     IS_MPL = True
@@ -30,12 +31,36 @@ def parse_raw(raw_file):
     statistic = dict([(country, (lambda x:[sum(y) for y in zip(*x)])([s[1] for s in statistic_dups if s[0] == country])) for country in set(next(zip(*statistic_dups)))])
     return (statistic, datestamps)
 
+def parse_population(raw_file):
+    reader = csv.reader(open(raw_file))
+    header = next(reader)
+    full_dum = [(x[0],x[2],x[3]) for x in reader]
+    latest_count = [sorted([item for item in full_dum if item[0]==ctr], key=lambda x:x[1])[-1] for ctr in set(next(zip(*full_dum)))]
+    return dict([(lc[0].upper(), lc[2]) for lc in latest_count])
+
+def get_country_size(db_population, country_name, verbose = False):
+    country_names = sorted(list(db_population.keys()))
+    country_name = country_name.upper()
+    ctr_result = difflib.get_close_matches(country_name, country_names)
+    if ctr_result == []:
+        if verbose:
+            print(f"\033[91mError! The country {country_name} or similar was not found!")
+        return None
+    elif ctr_result[0] == country_name:
+        return int(db_population[country_name])
+    else:
+        if verbose:
+            print(f"\033[91mWarning! The country {country_name} was not found! The closest name is {ctr_result[0]}\033[0m")
+        int(db_population[ctr_result[0]])
+
 def load_raw_data(path, lock_filename):
     print("Update raw data....")
     res = requests.get("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
     open(f"{path}/Confirmed.csv","w").write(res.text)
     res = requests.get("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
     open(f"{path}/Deaths.csv","w").write(res.text)
+    res = requests.get("https://raw.githubusercontent.com/datasets/population/master/data/population.csv")
+    open(f"{path}/population.csv","w").write(res.text)
     #res = requests.get("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv")
     #open(f"{path}/Recovered.csv","w").write(res.text)
     open(lock_filename,"w").write(str(date.today()))
@@ -53,7 +78,7 @@ def init_update():
             load_raw_data(COVID_PATH, lock_filename)
 
 
-def load_statistic():
+def load_statistic(in_persentage=False):
     def diff_array(ar):
         return [0]+[ar[i]-ar[i-1] for i in range(1,len(ar))]
     def diff_db(db):
@@ -65,6 +90,16 @@ def load_statistic():
     db_confirmed = parse_raw(f"{COVID_PATH}/Confirmed.csv")
     db_death = parse_raw(f"{COVID_PATH}/Deaths.csv")
     #db_recovered = parse_raw(f"{COVID_PATH}/Recovered.csv")
+    db_population = parse_population(f"{COVID_PATH}/population.csv")
+    #print(get_country_size(db_population, "ukraine"))
+    for db in [db_confirmed, db_death]:
+        if in_persentage:
+            for d in db[0]:
+                population = get_country_size(db_population, d)
+                if population == None:
+                    db[0][d] = [0]*len(db[0][d])
+                else:
+                    db[0][d] = [val/population*100 for val in db[0][d]]
 
     db_confirmed_diff = diff_db(db_confirmed)
     db_death_diff = diff_db(db_death)
@@ -88,9 +123,11 @@ def show_countires(statistic):
     #print("R - recovered, RD - recovered daily")
     print("-"*(30*(COL_NUM+1)))
 
-def plot_subgraph(plt, statistic, countries, formats):
-    [plt.plot(statistic[f][0][c]) for c in countries for f in formats]
-    plt.legend([f"{c}: {FMTS[f]}" for c in countries for f in formats])
+def plot_subgraph(plt, statistic, countries, fmt):
+    #[plt.plot(statistic[f][0][c]) for c in countries for f in formats]
+    #plt.legend([f"{c}: {FMTS[f]}" for c in countries for f in formats])
+    [plt.plot(statistic[fmt][0][c]) for c in countries]
+    plt.legend([f"{c}: {FMTS[fmt]}" for c in countries])
     plt.grid(which='minor', alpha=0.3)
     plt.grid(which='major', alpha=0.5)
     plt.minorticks_on()
@@ -105,6 +142,7 @@ def main():
         print("      -l              - show country names")
         print("      -c <COUNTRIES>  - set counties (coma separated)")
         print("      -f <FORMATS>    - set formats (coma separated)")
+        print("      -p              - all values in population persentage (betta)")
         print("     Formats: [C]onfirmed , [D]eaths")
         print("              +[D]aily")
         print("---------------------------------------------------")
@@ -115,7 +153,7 @@ def main():
         print("    python3 %s -c 'China'  #show for China confirmed, deaths and recovered"%sys.argv[0])
         exit(0)
     init_update()
-    statistic = load_statistic()
+    statistic = load_statistic('-p' in sys.argv)
     if '-l' in sys.argv:
         show_countires(statistic)
         exit(0)
@@ -125,6 +163,7 @@ def main():
         exit(-1)
     countries = sys.argv[sys.argv.index('-c')+1].upper().split(',')
     formats = ('C,D' if not '-f' in sys.argv else sys.argv[sys.argv.index('-f')+1]).upper().split(',')
+    formats = list(set(formats))
     print("Timeline:")
     print("    "+str(statistic['C'][1]))
     print()
@@ -135,14 +174,36 @@ def main():
             print("        "+str(statistic[f][0][c]))
         print()
     if IS_MPL:
-        if (DAILY_SET & set(formats) == set([])) or (set(formats) - DAILY_SET == set([])):
+        #if (DAILY_SET & set(formats) == set([])) or (set(formats) - DAILY_SET == set([])):
+        #    plot_subgraph(plt, statistic, countries, formats)
+        #else:
+        #    plt.subplot(211)
+        #    plot_subgraph(plt, statistic, countries, set(formats)-DAILY_SET)
+        #    plt.subplot(212)
+        #    plot_subgraph(plt, statistic, countries, set(formats)&DAILY_SET)
+        if len(formats) == 1:
             plot_subgraph(plt, statistic, countries, formats)
-        else:
+        elif len(formats) == 2:
             plt.subplot(211)
-            plot_subgraph(plt, statistic, countries, set(formats)-DAILY_SET)
+            plot_subgraph(plt, statistic, countries, formats[0])
             plt.subplot(212)
-            plot_subgraph(plt, statistic, countries, set(formats)&DAILY_SET)
-
+            plot_subgraph(plt, statistic, countries, formats[1])
+        elif len(formats) == 3:
+            plt.subplot(311)
+            plot_subgraph(plt, statistic, countries, formats[0])
+            plt.subplot(312)
+            plot_subgraph(plt, statistic, countries, formats[1])
+            plt.subplot(313)
+            plot_subgraph(plt, statistic, countries, formats[2])
+        elif len(formats) == 4:
+            plt.subplot(221)
+            plot_subgraph(plt, statistic, countries, formats[0])
+            plt.subplot(222)
+            plot_subgraph(plt, statistic, countries, formats[1])
+            plt.subplot(223)
+            plot_subgraph(plt, statistic, countries, formats[2])
+            plt.subplot(224)
+            plot_subgraph(plt, statistic, countries, formats[3])
         plt.show()
 
 
