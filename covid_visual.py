@@ -67,15 +67,17 @@ def load_raw_data(path, lock_filename):
 
 def init_update():
     lock_filename = f"{COVID_PATH}/{COVID_LOCK}"
-    if not os.path.exists(COVID_PATH):
-        os.mkdir(COVID_PATH)
-        load_raw_data(COVID_PATH, lock_filename)
-    if not os.path.exists(lock_filename):
-        load_raw_data(COVID_PATH, lock_filename)
-    else:
-        last_date = open(lock_filename).read()
-        if last_date != str(date.today()):
-            load_raw_data(COVID_PATH, lock_filename)
+    load_raw_data(COVID_PATH, lock_filename)
+#disable updating once per day
+    #if not os.path.exists(COVID_PATH):
+    #    os.mkdir(COVID_PATH)
+    #    load_raw_data(COVID_PATH, lock_filename)
+    #if not os.path.exists(lock_filename):
+    #    load_raw_data(COVID_PATH, lock_filename)
+    #else:
+    #    last_date = open(lock_filename).read()
+    #    if last_date != str(date.today()):
+    #        load_raw_data(COVID_PATH, lock_filename)
 
 
 def load_statistic(in_persentage=False):
