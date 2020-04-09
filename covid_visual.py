@@ -89,7 +89,7 @@ def init_update():
     #        load_raw_data(COVID_PATH, lock_filename)
 
 
-def load_statistic(in_persentage=False, log_schem=False):
+def load_statistic(in_persentage=False):
     def diff_array(ar):
         return [0]+[ar[i]-ar[i-1] for i in range(1,len(ar))]
     def diff_db(db):
@@ -111,9 +111,6 @@ def load_statistic(in_persentage=False, log_schem=False):
                     db[0][d] = [0]*len(db[0][d])
                 else:
                     db[0][d] = [val/population*100 for val in db[0][d]]
-        if log_schem:
-            for d in db[0]:
-                db[0][d] = [math.log(val) if val!=0 else 0 for val in db[0][d]]
 
 
     db_confirmed_diff = diff_db(db_confirmed)
@@ -139,7 +136,7 @@ def show_countires(statistic):
     #print("R - recovered, RD - recovered daily")
     print("-"*(30*(COL_NUM+1)))
 
-def plot_subgraph(plt, statistic, countries, fmt):
+def plot_subgraph(plt, statistic, countries, fmt, log_scale=False):
     #[plt.plot(statistic[f][0][c]) for c in countries for f in formats]
     #plt.legend([f"{c}: {FMTS[f]}" for c in countries for f in formats])
     [plt.plot(statistic[fmt][0][c]) for c in countries]
@@ -150,6 +147,8 @@ def plot_subgraph(plt, statistic, countries, fmt):
     plt.xticks(range(0,len(statistic['C'][1]),AXIS_SPARSE), statistic['C'][1][::AXIS_SPARSE])
     plt.xlabel("Date")
     plt.ylabel("People")
+    if log_scale:
+        plt.yscale("log")
 
 def main():
     if "-h" in sys.argv or '--help' in sys.argv or len(sys.argv)==1:
@@ -170,7 +169,7 @@ def main():
         print("    python3 %s -c 'China'  #show for China confirmed, deaths and recovered"%sys.argv[0])
         exit(0)
     init_update()
-    statistic = load_statistic('-p' in sys.argv, '-n' in sys.argv)
+    statistic = load_statistic('-p' in sys.argv)
     if '-l' in sys.argv:
         show_countires(statistic)
         exit(0)
@@ -197,29 +196,30 @@ def main():
         #    plot_subgraph(plt, statistic, countries, set(formats)-DAILY_SET)
         #    plt.subplot(212)
         #    plot_subgraph(plt, statistic, countries, set(formats)&DAILY_SET)
+        log_scale = '-n' in sys.argv
         if len(formats) == 1:
-            plot_subgraph(plt, statistic, countries, formats[0])
+            plot_subgraph(plt, statistic, countries, formats[0], log_scale)
         elif len(formats) == 2:
             plt.subplot(211)
-            plot_subgraph(plt, statistic, countries, formats[0])
+            plot_subgraph(plt, statistic, countries, formats[0], log_scale)
             plt.subplot(212)
-            plot_subgraph(plt, statistic, countries, formats[1])
+            plot_subgraph(plt, statistic, countries, formats[1], log_scale)
         elif len(formats) == 3:
             plt.subplot(311)
-            plot_subgraph(plt, statistic, countries, formats[0])
+            plot_subgraph(plt, statistic, countries, formats[0], log_scale)
             plt.subplot(312)
-            plot_subgraph(plt, statistic, countries, formats[1])
+            plot_subgraph(plt, statistic, countries, formats[1], log_scale)
             plt.subplot(313)
-            plot_subgraph(plt, statistic, countries, formats[2])
+            plot_subgraph(plt, statistic, countries, formats[2], log_scale)
         elif len(formats) == 4:
             plt.subplot(221)
-            plot_subgraph(plt, statistic, countries, formats[0])
+            plot_subgraph(plt, statistic, countries, formats[0], log_scale)
             plt.subplot(222)
-            plot_subgraph(plt, statistic, countries, formats[1])
+            plot_subgraph(plt, statistic, countries, formats[1], log_scale)
             plt.subplot(223)
-            plot_subgraph(plt, statistic, countries, formats[2])
+            plot_subgraph(plt, statistic, countries, formats[2], log_scale)
             plt.subplot(224)
-            plot_subgraph(plt, statistic, countries, formats[3])
+            plot_subgraph(plt, statistic, countries, formats[3], log_scale)
         else:
             print("Error, duplicated formats?")
         plt.show()
