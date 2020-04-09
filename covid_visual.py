@@ -101,16 +101,19 @@ def load_statistic(in_persentage=False):
     db_confirmed = parse_raw(f"{COVID_PATH}/Confirmed.csv")
     db_death = parse_raw(f"{COVID_PATH}/Deaths.csv")
     #db_recovered = parse_raw(f"{COVID_PATH}/Recovered.csv")
-    db_population = parse_population(f"{COVID_PATH}/population.csv")
-    #print(get_country_size(db_population, "ukraine"))
-    for db in [db_confirmed, db_death]:
-        if in_persentage:
-            for d in db[0]:
-                population = get_country_size(db_population, d)
-                if population == None:
-                    db[0][d] = [0]*len(db[0][d])
-                else:
-                    db[0][d] = [val/population*100 for val in db[0][d]]
+    try:
+        db_population = parse_population(f"{COVID_PATH}/population.csv")
+        #print(get_country_size(db_population, "ukraine"))
+        for db in [db_confirmed, db_death]:
+            if in_persentage:
+                for d in db[0]:
+                    population = get_country_size(db_population, d)
+                    if population == None:
+                        db[0][d] = [0]*len(db[0][d])
+                    else:
+                        db[0][d] = [val/population*100 for val in db[0][d]]
+    except:
+        pass #proplems with population encoding?
 
 
     db_confirmed_diff = diff_db(db_confirmed)
