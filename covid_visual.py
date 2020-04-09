@@ -7,6 +7,7 @@ try:
 except:
     print("Package 'matplotlib' isn't installed. Try to install or change python version (3.7->3.6?)")
     IS_MPL = False
+import math
 import requests
 import sys
 import os
@@ -29,12 +30,20 @@ def parse_raw(raw_file):
     datestamps = next(reader)[4:]
     statistic_dups = [(r[1].upper().replace(',',''), list(map(lambda x:int(x) if x!='' else 0, r[4:]))) for r in reader]
     statistic = dict([(country, (lambda x:[sum(y) for y in zip(*x)])([s[1] for s in statistic_dups if s[0] == country])) for country in set(next(zip(*statistic_dups)))])
+    statistic["TOTAL"] = [sum([j[i] for j in statistic.values()]) for i in range(len(datestamps))]
     return (statistic, datestamps)
 
 def parse_population(raw_file):
+    def _patch_country_name(data):
+        patch = [("United States","US")]
+        p_data = data
+        for p in patch:
+            p_data = p_data.replace(p[0],p[1])
+        return p_data
+
     reader = csv.reader(open(raw_file))
     header = next(reader)
-    full_dum = [(x[0],x[2],x[3]) for x in reader]
+    full_dum = [(_patch_country_name(x[0]),x[2],x[3]) for x in reader]
     latest_count = [sorted([item for item in full_dum if item[0]==ctr], key=lambda x:x[1])[-1] for ctr in set(next(zip(*full_dum)))]
     return dict([(lc[0].upper(), lc[2]) for lc in latest_count])
 
@@ -80,7 +89,7 @@ def init_update():
     #        load_raw_data(COVID_PATH, lock_filename)
 
 
-def load_statistic(in_persentage=False):
+def load_statistic(in_persentage=False, log_schem=False):
     def diff_array(ar):
         return [0]+[ar[i]-ar[i-1] for i in range(1,len(ar))]
     def diff_db(db):
@@ -102,6 +111,10 @@ def load_statistic(in_persentage=False):
                     db[0][d] = [0]*len(db[0][d])
                 else:
                     db[0][d] = [val/population*100 for val in db[0][d]]
+        if log_schem:
+            for d in db[0]:
+                db[0][d] = [math.log(val) if val!=0 else 0 for val in db[0][d]]
+
 
     db_confirmed_diff = diff_db(db_confirmed)
     db_death_diff = diff_db(db_death)
@@ -114,6 +127,7 @@ def show_countires(statistic):
     print("-"*(30*(COL_NUM+1)))
     print("Countries:")
     print("="*(30*(COL_NUM+1)))
+    print("   TOTAL - overall statistic")
     country_list = sorted(list(map(lambda x:"{:<35s}".format(x), statistic["C"][0].keys())))
     country_list = country_list
     for i in range(len(country_list)//COL_NUM + 1):
@@ -145,6 +159,7 @@ def main():
         print("      -c <COUNTRIES>  - set counties (coma separated)")
         print("      -f <FORMATS>    - set formats (coma separated)")
         print("      -p              - all values in population persentage (betta)")
+        print("      -n              - log schema (betta)")
         print("     Formats: [C]onfirmed , [D]eaths")
         print("              +[D]aily")
         print("---------------------------------------------------")
@@ -155,7 +170,7 @@ def main():
         print("    python3 %s -c 'China'  #show for China confirmed, deaths and recovered"%sys.argv[0])
         exit(0)
     init_update()
-    statistic = load_statistic('-p' in sys.argv)
+    statistic = load_statistic('-p' in sys.argv, '-n' in sys.argv)
     if '-l' in sys.argv:
         show_countires(statistic)
         exit(0)
